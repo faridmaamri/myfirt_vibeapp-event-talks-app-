@@ -13,6 +13,7 @@ const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
 const categoryFilters = document.getElementById('category-filters');
 const floatingHighlightBtn = document.getElementById('floating-highlight-btn');
+const exportCsvBtn = document.getElementById('export-csv-btn');
 
 // Stats Elements
 const statTotal = document.getElementById('stat-total');
@@ -228,6 +229,13 @@ function renderReleases() {
             </div>
             
             <div class="card-footer">
+                <button class="btn btn-secondary btn-card-copy" data-id="${release.id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>Copy Text</span>
+                </button>
                 <button class="btn btn-card-tweet" data-id="${release.id}">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -236,6 +244,12 @@ function renderReleases() {
                 </button>
             </div>
         `;
+        
+        // Attach copy event to the button
+        card.querySelector('.btn-card-copy').addEventListener('click', (e) => {
+            e.stopPropagation();
+            copyReleaseToClipboard(release, e.currentTarget);
+        });
         
         // Attach tweet event to the button
         card.querySelector('.btn-card-tweet').addEventListener('click', (e) => {
@@ -508,6 +522,110 @@ modalTweetBtn.addEventListener('click', () => {
     closeTweetComposer();
     showToast('Redirected to X / Twitter intent.');
 });
+
+/* ==========================================================================
+   Utility Helpers (Copy to Clipboard & CSV Export)
+   ========================================================================== */
+
+function copyReleaseToClipboard(release, button) {
+    const formattedText = `BigQuery Update [${release.type}] - ${release.date}\n\n${release.content_text}\n\nRead more: ${release.link}`;
+    
+    navigator.clipboard.writeText(formattedText).then(() => {
+        const btnText = button.querySelector('span');
+        const originalHtml = button.innerHTML;
+        
+        button.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span style="color: #10b981;">Copied!</span>
+        `;
+        button.disabled = true;
+        
+        setTimeout(() => {
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        showToast('Failed to copy to clipboard.');
+    });
+}
+
+function exportToCSV() {
+    if (!releasesData || releasesData.length === 0) {
+        showToast('No data to export.');
+        return;
+    }
+    
+    const filtered = releasesData.filter(release => {
+        const matchesCategory = currentFilter === 'all' || 
+            (currentFilter.toLowerCase() === 'issue' && (release.type.toLowerCase() === 'issue' || release.type.toLowerCase() === 'fixed')) ||
+            release.type.toLowerCase() === currentFilter.toLowerCase();
+            
+        const cleanContent = release.content_text.toLowerCase();
+        const matchesSearch = !searchQuery || 
+            release.date.toLowerCase().includes(searchQuery) ||
+            release.type.toLowerCase().includes(searchQuery) ||
+            cleanContent.includes(searchQuery);
+            
+        return matchesCategory && matchesSearch;
+    });
+    
+    if (filtered.length === 0) {
+        showToast('No filtered data to export.');
+        return;
+    }
+    
+    const escapeCSV = (text) => {
+        if (!text) return '';
+        let escaped = text.replace(/"/g, '""');
+        if (escaped.includes(',') || escaped.includes('\n') || escaped.includes('\r') || escaped.includes('"')) {
+            escaped = `"${escaped}"`;
+        }
+        return escaped;
+    };
+    
+    let csvRows = [];
+    csvRows.push(['ID', 'Date', 'Type', 'Content Plain Text', 'Source Link'].map(escapeCSV).join(','));
+    
+    filtered.forEach(r => {
+        csvRows.push([
+            r.id,
+            r.date,
+            r.type,
+            r.content_text,
+            r.link
+        ].map(escapeCSV).join(','));
+    });
+    
+    const csvContent = csvRows.join('\n');
+    
+    try {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        const filterStr = currentFilter !== 'all' ? `_${currentFilter.toLowerCase()}` : '';
+        const searchStr = searchQuery ? `_search_${searchQuery.replace(/[^a-z0-9]/gi, '_').toLowerCase()}` : '';
+        const filename = `bigquery_release_notes${filterStr}${searchStr}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast(`Exported ${filtered.length} items to CSV.`);
+    } catch (e) {
+        console.error('CSV Export Error: ', e);
+        showToast('Failed to export CSV.');
+    }
+}
+
+// Export button listener
+exportCsvBtn.addEventListener('click', exportToCSV);
 
 /* ==========================================================================
    App Initialization
