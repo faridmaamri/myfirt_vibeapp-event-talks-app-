@@ -17,6 +17,9 @@ A premium, modern web dashboard for tracking and analyzing Google Cloud BigQuery
   * **Highlight-to-Tweet**: Drag your cursor to select any snippet of text in a card. A floating tooltip will instantly appear to draft a tweet containing that specific quote.
 * **X/Twitter Character Progress Ring**: Displays character constraints in real time with a glowing circular SVG loader that changes colors as you approach the 280-character limit.
 * **Smart Server Caching**: Saves feed results to a local cache (`cache.json`) for 5 minutes to avoid rate-limiting, with a force-refresh option in the UI.
+* **Light / Dark Theme Switcher**: Toggle between light and dark modes via a header button. It instantly overrides CSS root variables and persists your choice using browser `localStorage`.
+* **Copy to Clipboard Utility**: A card-level copy button that formats release information (Type, Date, description, and source link) cleanly for messaging or team channels.
+* **Export to CSV Utility**: Generates a downloadable, RFC-compliant CSV of your **currently active filtered and searched** release notes list.
 
 ---
 
