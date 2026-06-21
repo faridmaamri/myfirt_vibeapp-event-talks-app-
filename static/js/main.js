@@ -14,6 +14,9 @@ const clearSearchBtn = document.getElementById('clear-search-btn');
 const categoryFilters = document.getElementById('category-filters');
 const floatingHighlightBtn = document.getElementById('floating-highlight-btn');
 const exportCsvBtn = document.getElementById('export-csv-btn');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+const moonIcon = themeToggleBtn.querySelector('.moon-icon');
 
 // Stats Elements
 const statTotal = document.getElementById('stat-total');
@@ -628,9 +631,46 @@ function exportToCSV() {
 exportCsvBtn.addEventListener('click', exportToCSV);
 
 /* ==========================================================================
+   Theme Management (Light / Dark Mode Toggle)
+   ========================================================================== */
+
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-theme');
+    
+    if (isLight) {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        localStorage.setItem('theme', 'light');
+        showToast('Swapped to Light Theme');
+    } else {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        localStorage.setItem('theme', 'dark');
+        showToast('Swapped to Dark Theme');
+    }
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+    } else {
+        document.body.classList.remove('light-theme');
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+    }
+}
+
+// Bind theme toggle listener
+themeToggleBtn.addEventListener('click', toggleTheme);
+
+/* ==========================================================================
    App Initialization
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     fetchReleases();
 });
